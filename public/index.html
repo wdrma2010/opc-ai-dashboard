@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPC一人智能 | OPC Singular AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0a0c0f;
+            --bg-secondary: #111418;
+            --bg-card: #161b22;
+            --border: #1e293b;
+            --accent: #00f0ff;
+            --accent-dim: rgba(0,240,255,0.15);
+            --cyber-purple: #7c3aed;
+            --cyber-pink: #ec4899;
+            --text-primary: #e2e8f0;
+            --text-secondary: #8892a4;
+            --text-muted: #5a6478;
+            --gradient-1: linear-gradient(135deg, #00f0ff, #7c3aed);
+            --gradient-2: linear-gradient(135deg, #7c3aed, #ec4899);
+            --gradient-text: linear-gradient(135deg, #00f0ff, #7c3aed, #ec4899);
+        }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+        .grid-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(0,240,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,240,255,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none; z-index: 0;
+        }
+        .grid-bg::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(ellipse at 20% 50%, rgba(0,240,255,0.05) 0%, transparent 60%), radial-gradient(ellipse at 80% 50%, rgba(124,58,237,0.05) 0%, transparent 60%);
+        }
+        .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 0; pointer-events: none; }
+        .particle {
+            position: absolute; width: 3px; height: 3px; background: var(--accent); border-radius: 50%;
+            box-shadow: 0 0 6px var(--accent), 0 0 12px var(--accent-dim);
+            animation: float linear infinite; opacity: 0.4;
+        }
+        @keyframes float {
+            0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+            10% { opacity: 0.4; }
+            90% { opacity: 0.4; }
+            100% { transform: translateY(-10vh) translateX(100px); opacity: 0; }
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+        header {
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 100;
+            background: rgba(10,12,15,0.85); backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border); transition: all 0.3s ease;
+        }
+        header.scrolled { background: rgba(10,12,15,0.95); box-shadow: 0 4px 30px rgba(0,0,0,0.3); }
+        .nav { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; gap: 12px; }
+        .logo {
+            display: flex; align-items: center; gap: 10px; font-size: 1.3rem; font-weight: 800;
+            text-decoration: none; background: var(--gradient-text); -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; background-clip: text; white-space: nowrap;
+        }
+        .logo-icon {
+            width: 36px; height: 36px; background: var(--gradient-1); border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+            -webkit-text-fill-color: white; flex-shrink: 0;
+        }
+        .nav-links { display: flex; gap: 20px; list-style: none; align-items: center; }
+        .nav-links a {
+            color: var(--text-secondary); text-decoration: none; font-size: 0.85rem;
+            font-weight: 500; transition: color 0.3s ease; position: relative;
+        }
+        .nav-links a::after {
+            content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px;
+            background: var(--gradient-1); transition: width 0.3s ease;
+        }
+        .nav-links a:hover { color: var(--accent); }
+        .nav-links a:hover::after { width: 100%; }
+
+        .lang-selector {
+            position: relative; display: inline-block;
+        }
+        .lang-btn {
+            background: transparent; border: 1px solid var(--border); color: var(--text-secondary);
+            padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem;
+            display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;
+        }
+        .lang-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .lang-dropdown {
+            display: none; position: absolute; top: calc(100% + 8px); right: 0;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+            padding: 6px; min-width: 190px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); z-index: 200;
+            max-height: 320px; overflow-y: auto;
+        }
+        .lang-dropdown.show { display: block; }
+        .lang-dropdown::-webkit-scrollbar { width: 4px; }
+        .lang-dropdown::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+        .lang-option {
+            display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+            border-radius: 6px; cursor: pointer; transition: all 0.2s ease;
+            font-size: 0.85rem; color: var(--text-secondary); border: none; background: none; width: 100%; text-align: left;
+        }
+        .lang-option:hover { background: var(--accent-dim); color: var(--accent); }
+        .lang-option.active { background: var(--accent-dim); color: var(--accent); }
+        .lang-flag { font-size: 1.1rem; }
+
+        .nav-cta {
+            background: var(--gradient-1); border: none; padding: 8px 18px; border-radius: 8px;
+            color: #fff; font-weight: 600; font-size: 0.82rem; cursor: pointer; transition: all 0.3s ease;
+            text-decoration: none; white-space: nowrap;
+        }
+        .nav-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,240,255,0.3); }
+        .mobile-toggle { display: none; font-size: 1.5rem; color: var(--text-primary); cursor: pointer; background: none; border: none; }
+
+        .hero { min-height: 100vh; display: flex; align-items: center; padding: 120px 0 80px; position: relative; }
+        .hero-content { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--accent-dim); border: 1px solid rgba(0,240,255,0.2);
+            padding: 6px 16px; border-radius: 100px; font-size: 0.8rem; color: var(--accent); margin-bottom: 24px;
+        }
+        .hero-badge .dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .hero h1 {
+            font-size: 3.2rem; font-weight: 800; line-height: 1.15; margin-bottom: 24px;
+            background: var(--gradient-text); -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .hero p { font-size: 1.05rem; color: var(--text-secondary); margin-bottom: 32px; max-width: 540px; }
+        .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+        .btn-primary {
+            background: var(--gradient-1); border: none; padding: 14px 32px; border-radius: 10px;
+            color: #fff; font-weight: 600; font-size: 0.95rem; cursor: pointer;
+            transition: all 0.3s ease; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,240,255,0.35); }
+        .btn-outline {
+            background: transparent; border: 1px solid var(--border); padding: 14px 32px; border-radius: 10px;
+            color: var(--text-primary); font-weight: 600; font-size: 0.95rem; cursor: pointer;
+            transition: all 0.3s ease; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-3px); }
+        .hero-visual { position: relative; display: flex; justify-content: center; align-items: center; }
+        .hero-orb {
+            width: 400px; height: 400px; border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(0,240,255,0.15), rgba(124,58,237,0.1), transparent 70%);
+            border: 1px solid rgba(0,240,255,0.1); position: relative; animation: orbRotate 20s linear infinite;
+        }
+        @keyframes orbRotate { 0%{transform:rotate(0deg)scale(1)} 50%{transform:rotate(180deg)scale(1.05)} 100%{transform:rotate(360deg)scale(1)} }
+        .hero-orb::before {
+            content: ''; position: absolute; top: -2px; left: 50%; width: 40%; height: 4px;
+            background: var(--gradient-1); border-radius: 2px; transform: translateX(-50%);
+            box-shadow: 0 0 30px var(--accent), 0 0 60px var(--accent-dim);
+        }
+        .hero-orb-inner { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+        .hero-orb-inner i { font-size: 3.5rem; background: var(--gradient-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero-orb-inner h3 { margin-top: 12px; font-size: 1rem; color: var(--text-secondary); font-weight: 400; }
+
+        .stats-bar {
+            display: grid; grid-template-columns: repeat(4,1fr); gap: 24px;
+            padding: 40px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-top: 60px;
+        }
+        .stat-item { text-align: center; }
+        .stat-item h3 {
+            font-size: 2rem; font-weight: 800; background: var(--gradient-1);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .stat-item p { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+
+        section { padding: 100px 0; }
+        .section-label {
+            display: inline-flex; align-items: center; gap: 8px; color: var(--accent);
+            font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px;
+        }
+        .section-label::before { content: ''; width: 24px; height: 1px; background: var(--accent); }
+        .section-title { font-size: 2.5rem; font-weight: 700; margin-bottom: 16px; }
+        .section-subtitle { color: var(--text-secondary); font-size: 1.05rem; max-width: 600px; }
+
+        .services-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; margin-top: 48px; }
+        .service-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+            padding: 32px; transition: all 0.4s ease; position: relative; overflow: hidden;
+        }
+        .service-card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+            background: var(--gradient-1); transform: scaleX(0); transform-origin: left; transition: transform 0.4s ease;
+        }
+        .service-card:hover::before { transform: scaleX(1); }
+        .service-card:hover { border-color: rgba(0,240,255,0.3); transform: translateY(-6px); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .service-icon {
+            width: 52px; height: 52px; background: var(--accent-dim); border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: var(--accent); margin-bottom: 20px;
+        }
+        .service-card h3 { font-size: 1.2rem; margin-bottom: 12px; }
+        .service-card p { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.7; }
+
+        .blog-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; margin-top: 48px; }
+        .blog-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+            overflow: hidden; transition: all 0.4s ease;
+        }
+        .blog-card:hover { border-color: rgba(0,240,255,0.3); transform: translateY(-6px); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .blog-card-img {
+            height: 200px; background: var(--bg-secondary); display: flex;
+            align-items: center; justify-content: center; font-size: 3rem; color: var(--accent); position: relative; overflow: hidden;
+        }
+        .blog-card-img::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 60%; background: linear-gradient(transparent,var(--bg-card)); }
+        .blog-card-body { padding: 24px; }
+        .blog-tag {
+            display: inline-block; padding: 4px 12px; background: var(--accent-dim);
+            color: var(--accent); border-radius: 100px; font-size: 0.75rem; font-weight: 600; margin-bottom: 12px;
+        }
+        .blog-card-body h3 { font-size: 1.1rem; margin-bottom: 8px; line-height: 1.4; }
+        .blog-card-body p { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6; }
+        .blog-meta { display: flex; align-items: center; gap: 16px; margin-top: 16px; font-size: 0.8rem; color: var(--text-muted); }
+
+        .about-section { background: var(--bg-secondary); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+        .about-text h2 { font-size: 2.5rem; font-weight: 700; margin-bottom: 24px; }
+        .about-text h2 span { background: var(--gradient-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .about-text p { color: var(--text-secondary); margin-bottom: 20px; }
+        .about-stats { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-top: 32px; }
+        .about-stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; text-align: center; }
+        .about-stat h4 { font-size: 1.8rem; font-weight: 800; background: var(--gradient-2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .about-stat p { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0; }
+        .about-visual { display: flex; justify-content: center; align-items: center; }
+        .code-block {
+            background: var(--bg-primary); border: 1px solid var(--border); border-radius: 12px;
+            padding: 24px; font-family: 'Cascadia Code','Fira Code',monospace; font-size: 0.8rem;
+            line-height: 1.8; color: var(--text-secondary); width: 100%; overflow-x: auto;
+        }
+        .code-block .keyword { color: var(--cyber-purple); }
+        .code-block .func { color: var(--accent); }
+        .code-block .string { color: var(--cyber-pink); }
+        .code-block .comment { color: var(--text-muted); }
+
+        .cta-section { text-align: center; padding: 100px 0; }
+        .cta-section h2 { font-size: 3rem; font-weight: 800; margin-bottom: 16px; background: var(--gradient-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .cta-section p { color: var(--text-secondary); font-size: 1.1rem; max-width: 500px; margin: 0 auto 32px; }
+        .cta-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .telegram-btn {
+            background: linear-gradient(135deg,#1e96c8,#2aabee); border: none; padding: 14px 32px;
+            border-radius: 10px; color: #fff; font-weight: 600; font-size: 0.95rem; cursor: pointer;
+            transition: all 0.3s ease; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
+        }
+        .telegram-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(42,171,238,0.4); }
+
+        footer { border-top: 1px solid var(--border); padding: 60px 0 30px; }
+        .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+        .footer-brand p { color: var(--text-muted); font-size: 0.9rem; margin-top: 16px; max-width: 320px; }
+        .footer-social { display: flex; gap: 12px; margin-top: 20px; }
+        .footer-social a {
+            width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+            text-decoration: none; transition: all 0.3s ease;
+        }
+        .footer-social a:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-3px); }
+        .footer-col h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary); }
+        .footer-col ul { list-style: none; }
+        .footer-col ul li { margin-bottom: 10px; }
+        .footer-col ul li a { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; transition: color 0.3s ease; }
+        .footer-col ul li a:hover { color: var(--accent); }
+        .footer-bottom { border-top: 1px solid var(--border); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--text-muted); }
+
+        @media (max-width: 1024px){
+            .hero-content{grid-template-columns:1fr;text-align:center}
+            .hero p{margin:0 auto 32px}
+            .hero-actions{justify-content:center}
+            .hero-orb{width:300px;height:300px}
+            .services-grid,.blog-grid{grid-template-columns:repeat(2,1fr)}
+            .footer-grid{grid-template-columns:repeat(2,1fr)}
+            .about-grid{grid-template-columns:1fr}
+        }
+        @media (max-width: 768px) {
+            .nav-links{display:none}
+            .mobile-toggle{display:block}
+            .nav-links.active{
+                display:flex;flex-direction:column;position:absolute;top:100%;left:0;
+                width:100%;background:rgba(10,12,15,0.98);backdrop-filter:blur(20px);
+                padding:20px;gap:16px;border-bottom:1px solid var(--border);
+            }
+            .hero h1{font-size:2.2rem}
+            .hero-orb{width:220px;height:220px}
+            .stats-bar{grid-template-columns:repeat(2,1fr);gap:16px}
+            .services-grid,.blog-grid{grid-template-columns:1fr}
+            .section-title{font-size:1.8rem}
+            .cta-section h2{font-size:2rem}
+            .footer-grid{grid-template-columns:1fr}
+            .footer-bottom{flex-direction:column;gap:8px;text-align:center}
+            .about-grid{gap:32px}
+            .lang-dropdown{right:auto;left:0}
+        }
+        @media (max-width: 480px){
+            .hero{padding:100px 0 60px}
+            .hero h1{font-size:1.8rem}
+            .hero-orb{width:180px;height:180px}
+            .hero-orb-inner i{font-size:2.5rem}
+            .btn-primary,.btn-outline,.telegram-btn{padding:12px 24px;font-size:0.85rem}
+            section{padding:60px 0}
+        }
+        ::-webkit-scrollbar{width:6px}
+        ::-webkit-scrollbar-track{background:var(--bg-primary)}
+        ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+        ::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+        ::selection{background:rgba(0,240,255,0.2);color:var(--accent)}
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    <div class="particles" id="particles"></div>
+
+    <header id="header">
+        <div class="container">
+            <nav class="nav">
+                <a href="#" class="logo">
+                    <span class="logo-icon"><i class="fas fa-brain"></i></span>
+                    OPC<span style="font-weight:400;">一人智能</span>
+                </a>
+                <button class="mobile-toggle" onclick="document.querySelector('.nav-links').classList.toggle('active')">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <ul class="nav-links">
+                    <li><a href="#services" data-i18n="nav_services">服务</a></li>
+                    <li><a href="#blog" data-i18n="nav_blog">博客</a></li>
+                    <li><a href="#about" data-i18n="nav_about">关于</a></li>
+                    <li><a href="#contact" data-i18n="nav_contact">联系</a></li>
+                    <li class="lang-selector">
+                        <button class="lang-btn" id="langBtn" onclick="toggleLang()">
+                            <span id="langFlag">🌐</span>
+                            <span id="langName">中</span>
+                        </button>
+                        <div class="lang-dropdown" id="langDropdown">
+                            <button class="lang-option active" data-lang="zh"><span class="lang-flag">🇨🇳</span> 中文</button>
+                            <button class="lang-option" data-lang="en"><span class="lang-flag">🇺🇸</span> English</button>
+                            <button class="lang-option" data-lang="ja"><span class="lang-flag">🇯🇵</span> 日本語</button>
+                            <button class="lang-option" data-lang="vi"><span class="lang-flag">🇻🇳</span> Tiếng Việt</button>
+                            <button class="lang-option" data-lang="kk"><span class="lang-flag">🇰🇿</span> Қазақша</button>
+                            <button class="lang-option" data-lang="uz"><span class="lang-flag">🇺🇿</span> O'zbek</button>
+                            <button class="lang-option" data-lang="ky"><span class="lang-flag">🇰🇬</span> Кыргызча</button>
+                            <button class="lang-option" data-lang="tk"><span class="lang-flag">🇹🇲</span> Türkmen</button>
+                            <button class="lang-option" data-lang="tg"><span class="lang-flag">🇹🇯</span> Тоҷикӣ</button>
+                        </div>
+                    </li>
+                    <li><a href="https://t.me/AXWDRMA" class="nav-cta" target="_blank"><i class="fab fa-telegram-plane"></i> <span data-i18n="nav_cta">联系我</span></a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero" id="home">
+        <div class="container">
+            <div class="hero-content">
+                <div>
+                    <div class="hero-badge">
+                        <span class="dot"></span>
+                        <span data-i18n="hero_badge">AI Agent 驱动 · 一人即团队</span>
+                    </div>
+                    <h1 data-i18n="hero_title">OPC 一人智能<br>Singular AI</h1>
+                    <p data-i18n="hero_desc">基于多智能体协作架构，为独立开发者与小型团队提供企业级 AI 解决方案。从自动化工作流到智能决策系统，一个人，也能拥有整支 AI 团队。</p>
+                    <div class="hero-actions">
+                        <a href="https://t.me/AXWDRMA" class="btn-primary" target="_blank">
+                            <i class="fab fa-telegram-plane"></i> <span data-i18n="hero_contact">联系我</span>
+                        </a>
+                        <a href="#services" class="btn-outline">
+                            <span data-i18n="hero_explore">探索服务</span> <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="hero-orb">
+                        <div class="hero-orb-inner">
+                            <i class="fas fa-microchip"></i>
+                            <h3 data-i18n="hero_orb_label">Multi-Agent · 智能协作</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-bar">
+                <div class="stat-item"><h3>50+</h3><p data-i18n="stat_agents">AI 智能体</p></div>
+                <div class="stat-item"><h3>99.9%</h3><p data-i18n="stat_uptime">服务可用率</p></div>
+                <div class="stat-item"><h3>7×24</h3><p data-i18n="stat_auto">自动化运行</p></div>
+                <div class="stat-item"><h3>1人</h3><p data-i18n="stat_drive">即可驱动</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="services">
+        <div class="container">
+            <div class="section-label" data-i18n="services_label">核心服务</div>
+            <h2 class="section-title" data-i18n="services_title">一人智能 · 全能矩阵</h2>
+            <p class="section-subtitle" data-i18n="services_sub">覆盖智能体开发、部署、监控全链路，让个人开发者拥有企业级 AI 能力。</p>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-robot"></i></div>
+                    <h3 data-i18n="s1_title">智能体开发框架</h3>
+                    <p data-i18n="s1_desc">基于 OPC Multi-Agent 架构，支持 GPT、Claude、Gemini 等多模型编排，零代码搭建复杂工作流。</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                    <h3 data-i18n="s2_title">一键云部署</h3>
+                    <p data-i18n="s2_desc">深度集成 Wasmer、Docker、K8s 等云原生平台，从代码到上线，分钟级部署 AI 服务。</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-chart-line"></i></div>
+                    <h3 data-i18n="s3_title">智能监控运维</h3>
+                    <p data-i18n="s3_desc">自动扩缩容、异常告警、日志分析，AI 驱动的运维体系，7×24 小时无人值守。</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-link"></i></div>
+                    <h3 data-i18n="s4_title">API 网关 & 集成</h3>
+                    <p data-i18n="s4_desc">统一的 API 入口，支持 WebSocket、gRPC、REST，无缝对接 Telegram Bot、企业微信等平台。</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-shield-alt"></i></div>
+                    <h3 data-i18n="s5_title">安全 & 隐私保护</h3>
+                    <p data-i18n="s5_desc">端到端加密、数据脱敏、私有化部署，确保你的数据和模型安全可控。</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-magic"></i></div>
+                    <h3 data-i18n="s6_title">AI 工作流定制</h3>
+                    <p data-i18n="s6_desc">根据业务场景定制 AI 工作流，从内容生成到数据分析，让 AI 真正为你所用。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="blog" style="background:var(--bg-secondary);">
+        <div class="container">
+            <div class="section-label" data-i18n="blog_label">技术博客</div>
+            <h2 class="section-title" data-i18n="blog_title">最新洞察</h2>
+            <p class="section-subtitle" data-i18n="blog_sub">探索 AI 前沿技术、一人公司实践与智能体开发最佳实践。</p>
+            <div class="blog-grid">
+                <article class="blog-card">
+                    <div class="blog-card-img" style="background:linear-gradient(135deg,rgba(0,240,255,0.1),rgba(124,58,237,0.1));"><i class="fas fa-network-wired"></i></div>
+                    <div class="blog-card-body">
+                        <span class="blog-tag">Multi-Agent</span>
+                        <h3 data-i18n="b1_title">OPC Multi-Agent 架构：一人团队如何管理 50+ AI 智能体</h3>
+                        <p data-i18n="b1_desc">深入解析 OPC 一人智能的多智能体协作架构，探索 Agent 编排、任务分发与结果聚合的核心设计。</p>
+                        <div class="blog-meta"><span><i class="far fa-calendar-alt"></i> 2025.06</span><span><i class="far fa-clock"></i> 5 min</span></div>
+                    </div>
+                </article>
+                <article class="blog-card">
+                    <div class="blog-card-img" style="background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(236,72,153,0.1));"><i class="fas fa-cloud-upload-alt"></i></div>
+                    <div class="blog-card-body">
+                        <span class="blog-tag" data-i18n="b2_tag">部署</span>
+                        <h3 data-i18n="b2_title">Wasmer 部署实战：三步将 Python AI 服务部署到边缘</h3>
+                        <p data-i18n="b2_desc">手把手教你使用 Wasmer Edge 部署 AI 服务，利用 WebAssembly 实现毫秒级冷启动与全球分发。</p>
+                        <div class="blog-meta"><span><i class="far fa-calendar-alt"></i> 2025.05</span><span><i class="far fa-clock"></i> 8 min</span></div>
+                    </div>
+                </article>
+                <article class="blog-card">
+                    <div class="blog-card-img" style="background:linear-gradient(135deg,rgba(236,72,153,0.1),rgba(0,240,255,0.1));"><i class="fas fa-rocket"></i></div>
+                    <div class="blog-card-body">
+                        <span class="blog-tag" data-i18n="b3_tag">一人公司</span>
+                        <h3 data-i18n="b3_title">一人 SaaS 月入 5 万：我是如何用 AI 智能体替代整个团队</h3>
+                        <p data-i18n="b3_desc">分享从零搭建一人 AI 公司的实战经验，用 OPC 框架实现产品开发、营销、客服全链路自动化。</p>
+                        <div class="blog-meta"><span><i class="far fa-calendar-alt"></i> 2025.04</span><span><i class="far fa-clock"></i> 10 min</span></div>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="about-section" id="about">
+        <div class="container">
+            <div class="about-grid">
+                <div class="about-text">
+                    <div class="section-label" data-i18n="about_label">关于 OPC</div>
+                    <h2><span data-i18n="about_title_hl">一人智能</span><span data-i18n="about_title"> · 无限可能</span></h2>
+                    <p data-i18n="about_p1">OPC (One Person Company) 一人智能致力于让每一位独立开发者、极客和小型团队，都能以最低成本拥有企业级的 AI 基础设施。我们相信，AI 时代最好的团队规模，就是一个人。</p>
+                    <p data-i18n="about_p2">从多智能体编排到边缘部署，从自动化工作流到智能决策系统，OPC 提供完整的一人 AI 公司技术栈。无需庞大团队，无需巨额预算，一个人 + OPC = 无限可能。</p>
+                    <div class="about-stats">
+                        <div class="about-stat"><h4>500+</h4><p data-i18n="about_s1">活跃开发者</p></div>
+                        <div class="about-stat"><h4>10K+</h4><p data-i18n="about_s2">AI 工作流运行</p></div>
+                        <div class="about-stat"><h4>99%</h4><p data-i18n="about_s3">任务自动化率</p></div>
+                        <div class="about-stat"><h4>∞</h4><p data-i18n="about_s4">可能性</p></div>
+                    </div>
+                </div>
+                <div class="about-visual">
+                    <div class="code-block">
+                        <span class="comment"># OPC One Person AI</span><br>
+                        <span class="comment" data-i18n="code_comment1"># 一人智能 初始化</span><br><br>
+                        <span class="keyword">from</span> opc <span class="keyword">import</span> <span class="func">Agent</span>, <span class="func">Workflow</span><br><br>
+                        <span class="comment" data-i18n="code_comment2"># 创建 AI 团队</span><br>
+                        <span class="func">team</span> = [<br>
+                        &nbsp;&nbsp;<span class="func">Agent</span>(<span class="string">"coder"</span>, model=<span class="string">"claude-4"</span>),<br>
+                        &nbsp;&nbsp;<span class="func">Agent</span>(<span class="string">"designer"</span>, model=<span class="string">"gpt-5"</span>),<br>
+                        &nbsp;&nbsp;<span class="func">Agent</span>(<span class="string">"marketer"</span>, model=<span class="string">"gemini-3"</span>)<br>
+                        ]<br><br>
+                        <span class="comment" data-i18n="code_comment3"># 启动一人公司</span><br>
+                        <span class="func">result</span> = <span class="func">Workflow</span>(team).run(<br>
+                        &nbsp;&nbsp;<span class="string">"Build a SaaS product"</span><br>
+                        )<br><br>
+                        <span class="comment"># >>> "Ship it."</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section" id="contact">
+        <div class="container">
+            <h2 data-i18n="cta_title">开启你的一人智能时代</h2>
+            <p data-i18n="cta_desc">一个人 + AI = 无限可能。现在联系我，获取专属 AI 解决方案。</p>
+            <div class="cta-actions">
+                <a href="https://t.me/AXWDRMA" class="telegram-btn" target="_blank">
+                    <i class="fab fa-telegram-plane"></i> @AXWDRMA <span data-i18n="cta_contact">联系我</span>
+                </a>
+                <a href="#services" class="btn-outline">
+                    <span data-i18n="cta_more">了解更多</span> <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="#" class="logo"><span class="logo-icon"><i class="fas fa-brain"></i></span>OPC<span style="font-weight:400;">一人智能</span></a>
+                    <p data-i18n="footer_desc">基于多智能体协作架构的一人 AI 公司解决方案。一个人，也能拥有整支 AI 团队。</p>
+                    <div class="footer-social">
+                        <a href="https://t.me/AXWDRMA" target="_blank" title="Telegram"><i class="fab fa-telegram-plane"></i></a>
+                        <a href="#" title="GitHub"><i class="fab fa-github"></i></a>
+                        <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <h4 data-i18n="footer_services_title">服务</h4>
+                    <ul>
+                        <li><a href="#" data-i18n="footer_s1">AI 智能体开发</a></li>
+                        <li><a href="#" data-i18n="footer_s2">云部署方案</a></li>
+                        <li><a href="#" data-i18n="footer_s3">API 集成</a></li>
+                        <li><a href="#" data-i18n="footer_s4">工作流定制</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4 data-i18n="footer_resources_title">资源</h4>
+                    <ul>
+                        <li><a href="#" data-i18n="footer_r1">技术博客</a></li>
+                        <li><a href="#" data-i18n="footer_r2">文档中心</a></li>
+                        <li><a href="#" data-i18n="footer_r3">API 参考</a></li>
+                        <li><a href="#" data-i18n="footer_r4">常见问题</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4 data-i18n="footer_contact_title">联系</h4>
+                    <ul>
+                        <li><a href="https://t.me/AXWDRMA" target="_blank">Telegram: @AXWDRMA</a></li>
+                        <li><a data-i18n="footer_email" href="mailto:contact@opc-ai.com">Email</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span data-i18n="footer_copy">&copy; 2025 OPC 一人智能 · OPC Singular AI. All rights reserved.</span>
+                <span><span data-i18n="footer_made">Build with</span> <i class="fas fa-heart" style="color:var(--cyber-pink);"></i> <span data-i18n="footer_for">for one-person teams</span></span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const LANG_STORAGE_KEY = 'opc_lang';
+
+        const langFlags = {
+            zh: '🇨🇳', en: '🇺🇸', ja: '🇯🇵', vi: '🇻🇳',
+            kk: '🇰🇿', uz: '🇺🇿', ky: '🇰🇬', tk: '🇹🇲', tg: '🇹🇯'
+        };
+
+        const translations = {
+            zh: {
+                nav_services: '服务', nav_blog: '博客', nav_about: '关于', nav_contact: '联系', nav_cta: '联系我',
+                hero_badge: 'AI Agent 驱动 · 一人即团队',
+                hero_title: 'OPC 一人智能<br>Singular AI',
+                hero_desc: '基于多智能体协作架构，为独立开发者与小型团队提供企业级 AI 解决方案。从自动化工作流到智能决策系统，一个人，也能拥有整支 AI 团队。',
+                hero_contact: '联系我', hero_explore: '探索服务', hero_orb_label: 'Multi-Agent · 智能协作',
+                stat_agents: 'AI 智能体', stat_uptime: '服务可用率', stat_auto: '自动化运行', stat_drive: '即可驱动',
+                services_label: '核心服务', services_title: '一人智能 · 全能矩阵',
+                services_sub: '覆盖智能体开发、部署、监控全链路，让个人开发者拥有企业级 AI 能力。',
+                s1_title: '智能体开发框架', s1_desc: '基于 OPC Multi-Agent 架构，支持 GPT、Claude、Gemini 等多模型编排，零代码搭建复杂工作流。',
+                s2_title: '一键云部署', s2_desc: '深度集成 Wasmer、Docker、K8s 等云原生平台，从代码到上线，分钟级部署 AI 服务。',
+                s3_title: '智能监控运维', s3_desc: '自动扩缩容、异常告警、日志分析，AI 驱动的运维体系，7×24 小时无人值守。',
+                s4_title: 'API 网关 & 集成', s4_desc: '统一的 API 入口，支持 WebSocket、gRPC、REST，无缝对接 Telegram Bot、企业微信等平台。',
+                s5_title: '安全 & 隐私保护', s5_desc: '端到端加密、数据脱敏、私有化部署，确保你的数据和模型安全可控。',
+                s6_title: 'AI 工作流定制', s6_desc: '根据业务场景定制 AI 工作流，从内容生成到数据分析，让 AI 真正为你所用。',
+                blog_label: '技术博客', blog_title: '最新洞察', blog_sub: '探索 AI 前沿技术、一人公司实践与智能体开发最佳实践。',
+                b1_title: 'OPC Multi-Agent 架构：一人团队如何管理 50+ AI 智能体',
+                b1_desc: '深入解析 OPC 一人智能的多智能体协作架构，探索 Agent 编排、任务分发与结果聚合的核心设计。',
+                b2_tag: '部署', b2_title: 'Wasmer 部署实战：三步将 Python AI 服务部署到边缘',
+                b2_desc: '手把手教你使用 Wasmer Edge 部署 AI 服务，利用 WebAssembly 实现毫秒级冷启动与全球分发。',
+                b3_tag: '一人公司', b3_title: '一人 SaaS 月入 5 万：我是如何用 AI 智能体替代整个团队',
+                b3_desc: '分享从零搭建一人 AI 公司的实战经验，用 OPC 框架实现产品开发、营销、客服全链路自动化。',
+                about_label: '关于 OPC', about_title_hl: '一人智能', about_title: ' · 无限可能',
+                about_p1: 'OPC (One Person Company) 一人智能致力于让每一位独立开发者、极客和小型团队，都能以最低成本拥有企业级的 AI 基础设施。我们相信，AI 时代最好的团队规模，就是一个人。',
+                about_p2: '从多智能体编排到边缘部署，从自动化工作流到智能决策系统，OPC 提供完整的一人 AI 公司技术栈。无需庞大团队，无需巨额预算，一个人 + OPC = 无限可能。',
+                about_s1: '活跃开发者', about_s2: 'AI 工作流运行', about_s3: '任务自动化率', about_s4: '可能性',
+                code_comment1: '# 一人智能 初始化', code_comment2: '# 创建 AI 团队', code_comment3: '# 启动一人公司',
+                cta_title: '开启你的一人智能时代', cta_desc: '一个人 + AI = 无限可能。现在联系我，获取专属 AI 解决方案。',
+                cta_contact: '联系我', cta_more: '了解更多',
+                footer_desc: '基于多智能体协作架构的一人 AI 公司解决方案。一个人，也能拥有整支 AI 团队。',
+                footer_services_title: '服务', footer_s1: 'AI 智能体开发', footer_s2: '云部署方案', footer_s3: 'API 集成', footer_s4: '工作流定制',
+                footer_resources_title: '资源', footer_r1: '技术博客', footer_r2: '文档中心', footer_r3: 'API 参考', footer_r4: '常见问题',
+                footer_contact_title: '联系', footer_email: 'Email',
+                footer_copy: '© 2025 OPC 一人智能 · OPC Singular AI. All rights reserved.',
+                footer_made: 'Build with', footer_for: 'for one-person teams'
+            },
+            en: {
+                nav_services: 'Services', nav_blog: 'Blog', nav_about: 'About', nav_contact: 'Contact', nav_cta: 'Contact Me',
+                hero_badge: 'AI Agent Driven · One Person Team',
+                hero_title: 'OPC Singular AI<br>One Person, Infinite Power',
+                hero_desc: 'Enterprise-grade AI solutions for indie developers and small teams powered by multi-agent orchestration. From automated workflows to intelligent decision systems — one person, a whole AI team.',
+                hero_contact: 'Contact Me', hero_explore: 'Explore Services', hero_orb_label: 'Multi-Agent · Smart Orchestration',
+                stat_agents: 'AI Agents', stat_uptime: 'Uptime', stat_auto: 'Auto Operation', stat_drive: 'One Driver',
+                services_label: 'Core Services', services_title: 'Singular AI · Full Matrix',
+                services_sub: 'Full-stack agent development, deployment & monitoring — giving solo developers enterprise-grade AI capabilities.',
+                s1_title: 'Agent Framework', s1_desc: 'Built on OPC Multi-Agent architecture, supporting GPT, Claude, Gemini and more. Build complex workflows with zero code.',
+                s2_title: 'One-Click Deploy', s2_desc: 'Deep integration with Wasmer, Docker, K8s. From code to production in minutes.',
+                s3_title: 'Smart Monitoring', s3_desc: 'Auto-scaling, anomaly alerts, log analysis. AI-driven ops, 7×24 unattended.',
+                s4_title: 'API Gateway', s4_desc: 'Unified API entry with WebSocket, gRPC, REST. Seamless integration with Telegram Bot, WeCom and more.',
+                s5_title: 'Security & Privacy', s5_desc: 'End-to-end encryption, data masking, private deployment. Your data and models stay secure.',
+                s6_title: 'AI Workflow Custom', s6_desc: 'Tailored AI workflows for any scenario — from content generation to data analysis.',
+                blog_label: 'Tech Blog', blog_title: 'Latest Insights', blog_sub: 'Exploring AI frontiers, solo business practices, and agent development best practices.',
+                b1_title: 'OPC Multi-Agent: How One Person Manages 50+ AI Agents',
+                b1_desc: 'Deep dive into OPC\'s multi-agent orchestration architecture — agent编排, task distribution, and result aggregation.',
+                b2_tag: 'Deploy', b2_title: 'Wasmer Deploy: Ship Python AI to the Edge in 3 Steps',
+                b2_desc: 'Hands-on guide to deploying AI services on Wasmer Edge, leveraging WebAssembly for sub-second cold starts and global distribution.',
+                b3_tag: 'Solo Biz', b3_title: 'Earning $7K/mo Solo: How I Replaced a Whole Team with AI Agents',
+                b3_desc: 'Real-world experience building a one-person AI company — product dev, marketing, support fully automated with OPC.',
+                about_label: 'About OPC', about_title_hl: 'Singular AI', about_title: ' · Infinite Possibilities',
+                about_p1: 'OPC (One Person Company) empowers every indie developer, geek, and small team to own enterprise-grade AI infrastructure at minimal cost. We believe the best team size in the AI era is one.',
+                about_p2: 'From multi-agent orchestration to edge deployment, from automated workflows to intelligent decision systems, OPC delivers the complete stack for a one-person AI company. No huge team, no massive budget — one person + OPC = infinite possibilities.',
+                about_s1: 'Active Devs', about_s2: 'AI Workflows', about_s3: 'Auto Rate', about_s4: 'Possibilities',
+                code_comment1: '# Singular AI init', code_comment2: '# Create AI team', code_comment3: '# Launch one-person company',
+                cta_title: 'Start Your Singular AI Era', cta_desc: 'One person + AI = infinite possibilities. Contact me now for your custom AI solution.',
+                cta_contact: 'Contact Me', cta_more: 'Learn More',
+                footer_desc: 'One-person AI company solution powered by multi-agent architecture. One person, a whole AI team.',
+                footer_services_title: 'Services', footer_s1: 'AI Agent Dev', footer_s2: 'Cloud Deploy', footer_s3: 'API Integration', footer_s4: 'Workflow Custom',
+                footer_resources_title: 'Resources', footer_r1: 'Tech Blog', footer_r2: 'Docs', footer_r3: 'API Reference', footer_r4: 'FAQ',
+                footer_contact_title: 'Contact', footer_email: 'Email',
+                footer_copy: '© 2025 OPC Singular AI. All rights reserved.',
+                footer_made: 'Made with', footer_for: 'for one-person teams'
+            },
+            ja: {
+                nav_services: 'サービス', nav_blog: 'ブログ', nav_about: '概要', nav_contact: 'お問い合わせ', nav_cta: '連絡する',
+                hero_badge: 'AIエージェント駆動 · 一人でチームに',
+                hero_title: 'OPC シンギュラAI<br>一人で無限の力',
+                hero_desc: 'マルチエージェント協調アーキテクチャに基づき、独立した開発者や小規模チームにエンタープライズ級のAIソリューションを提供。自動化ワークフローからインテリジェント意思決定システムまで、一人でAIチーム全体を。',
+                hero_contact: '連絡する', hero_explore: 'サービスを見る', hero_orb_label: 'マルチエージェント · スマート連携',
+                stat_agents: 'AIエージェント', stat_uptime: '稼働率', stat_auto: '自動運用', stat_drive: '一人で駆動',
+                services_label: 'コアサービス', services_title: 'シンギュラAI · フルマトリックス',
+                services_sub: 'エージェント開発、デプロイ、監視の全工程をカバー。個人開発者にエンタープライズ級のAI能力を。',
+                s1_title: 'AIエージェントフレームワーク', s1_desc: 'OPC Multi-Agentアーキテクチャ採用。GPT、Claude、Gemini等のマルチモデル対応。ノーコードで複雑なワークフローを構築。',
+                s2_title: 'ワンクリックデプロイ', s2_desc: 'Wasmer、Docker、K8sと深く統合。コードから本番稼働まで数分。',
+                s3_title: 'スマート監視運用', s3_desc: '自動スケーリング、異常アラート、ログ分析。AI駆動の運用、年中無休無人稼働。',
+                s4_title: 'APIゲートウェイ', s4_desc: '統合APIエントリ。WebSocket、gRPC、REST対応。Telegram Bot、WeCom等とシームレス連携。',
+                s5_title: 'セキュリティとプライバシー', s5_desc: 'エンドツーエンド暗号化、データマスキング、プライベートデプロイ。データとモデルは安全に制御。',
+                s6_title: 'AIワークフローカスタム', s6_desc: 'ビジネスシーンに合わせたAIワークフロー設計。コンテンツ生成からデータ分析まで。',
+                blog_label: 'テックブログ', blog_title: '最新インサイト', blog_sub: 'AI最前線、一人企業の実践、エージェント開発のベストプラクティスを探求。',
+                b1_title: 'OPC Multi-Agent：一人で50+のAIエージェントを管理する方法',
+                b1_desc: 'OPC一人智能のマルチエージェント協調アーキテクチャ、エージェントオーケストレーション、タスク分散、結果集約の核心設計を解説。',
+                b2_tag: 'デプロイ', b2_title: 'Wasmer実践：3ステップでPython AIをエッジにデプロイ',
+                b2_desc: 'Wasmer Edgeを使ってAIサービスをデプロイ。WebAssemblyでミリ秒級コールドスタートとグローバル配信を実現。',
+                b3_tag: '一人企業', b3_title: '月収5万の一人SaaS：AIエージェントでチーム全体を代替した方法',
+                b3_desc: 'ゼロから一人AI企業を構築した実践経験。OPCで製品開発、マーケティング、サポートを完全自動化。',
+                about_label: 'OPCについて', about_title_hl: 'シンギュラAI', about_title: ' · 無限の可能性',
+                about_p1: 'OPC（One Person Company）は、全ての独立した開発者、ギーク、小規模チームが最小限のコストでエンタープライズ級のAIインフラを所有できるようにします。AI時代の最適なチーム規模は一人だと信じています。',
+                about_p2: 'マルチエージェントオーケストレーションからエッジデプロイ、自動化ワークフローからインテリジェント意思決定システムまで、OPCは完全な一人AI企業向け技術スタックを提供。大規模チームも巨額予算も不要。一人＋OPC＝無限の可能性。',
+                about_s1: 'アクティブ開発者', about_s2: 'AIワークフロー', about_s3: '自動化率', about_s4: '可能性',
+                code_comment1: '# シンギュラAI 初期化', code_comment2: '# AIチームを作成', code_comment3: '# 一人企業を起動',
+                cta_title: 'シンギュラAIの時代を始めよう', cta_desc: '一人＋AI＝無限の可能性。今すぐ連絡して、専用AIソリューションを。',
+                cta_contact: '連絡する', cta_more: 'もっと見る',
+                footer_desc: 'マルチエージェントアーキテクチャによる一人AI企業向けソリューション。一人で、AIチーム全体を。',
+                footer_services_title: 'サービス', footer_s1: 'AIエージェント開発', footer_s2: 'クラウドデプロイ', footer_s3: 'API統合', footer_s4: 'ワークフローカスタム',
+                footer_resources_title: 'リソース', footer_r1: 'テックブログ', footer_r2: 'ドキュメント', footer_r3: 'APIリファレンス', footer_r4: 'FAQ',
+                footer_contact_title: 'お問い合わせ', footer_email: 'メール',
+                footer_copy: '© 2025 OPC シンギュラAI. All rights reserved.',
+                footer_made: 'Build with', footer_for: 'for one-person teams'
+            },
+            vi: {
+                nav_services: 'Dịch vụ', nav_blog: 'Blog', nav_about: 'Giới thiệu', nav_contact: 'Liên hệ', nav_cta: 'Liên hệ tôi',
+                hero_badge: 'AI Agent · Một người là cả đội',
+                hero_title: 'OPC Singular AI<br>Một người, Sức mạnh vô hạn',
+                hero_desc: 'Giải pháp AI đẳng cấp doanh nghiệp cho nhà phát triển độc lập và nhóm nhỏ, dựa trên kiến trúc đa tác tử. Từ quy trình tự động đến hệ thống ra quyết định thông minh — một người, cả một đội AI.',
+                hero_contact: 'Liên hệ', hero_explore: 'Khám phá', hero_orb_label: 'Đa tác tử · Phối hợp thông minh',
+                stat_agents: 'AI Agent', stat_uptime: 'Tỉ lệ hoạt động', stat_auto: 'Tự động hóa', stat_drive: 'Một người',
+                services_label: 'Dịch vụ cốt lõi', services_title: 'Singular AI · Ma trận toàn năng',
+                services_sub: 'Bao phủ toàn bộ chu trình phát triển, triển khai và giám sát tác tử AI.',
+                s1_title: 'Khung tác tử AI', s1_desc: 'Kiến trúc OPC Multi-Agent, hỗ trợ GPT, Claude, Gemini. Xây dựng quy trình phức tạp không cần code.',
+                s2_title: 'Triển khai một chạm', s2_desc: 'Tích hợp sâu với Wasmer, Docker, K8s. Từ code đến production trong vài phút.',
+                s3_title: 'Giám sát thông minh', s3_desc: 'Tự động mở rộng, cảnh báo bất thường, phân tích log. Vận hành 24/7 không cần người.',
+                s4_title: 'API Gateway', s4_desc: 'Cổng API thống nhất với WebSocket, gRPC, REST. Tích hợp Telegram Bot, WeCom v.v.',
+                s5_title: 'Bảo mật & Riêng tư', s5_desc: 'Mã hóa đầu cuối, che dữ liệu, triển khai riêng tư. Dữ liệu và mô hình an toàn.',
+                s6_title: 'Tùy chỉnh AI Workflow', s6_desc: 'Thiết kế quy trình AI theo từng tình huống — từ sinh nội dung đến phân tích dữ liệu.',
+                blog_label: 'Blog Công nghệ', blog_title: 'Góc nhìn mới nhất', blog_sub: 'Khám phá AI tiên phong, thực hành một người làm chủ, và phát triển tác tử.',
+                b1_title: 'OPC Multi-Agent: Một người quản lý 50+ AI Agent',
+                b1_desc: 'Phân tích sâu kiến trúc đa tác tử OPC — điều phối Agent, phân phối tác vụ, tổng hợp kết quả.',
+                b2_tag: 'Triển khai', b2_title: 'Wasmer: 3 bước triển khai Python AI lên Edge',
+                b2_desc: 'Hướng dẫn thực hành triển khai AI trên Wasmer Edge, dùng WebAssembly cho khởi động nhanh và phân phối toàn cầu.',
+                b3_tag: 'Một người làm chủ', b3_title: 'Thu nhập $7K/tháng một mình: Thay thế cả đội bằng AI',
+                b3_desc: 'Kinh nghiệm xây dựng công ty AI một người từ con số 0 — tự động hóa phát triển, tiếp thị, hỗ trợ với OPC.',
+                about_label: 'Về OPC', about_title_hl: 'Singular AI', about_title: ' · Vô hạn khả năng',
+                about_p1: 'OPC (One Person Company) trao quyền cho mọi nhà phát triển độc lập, geek và nhóm nhỏ sở hữu hạ tầng AI đẳng cấp doanh nghiệp với chi phí tối thiểu.',
+                about_p2: 'Từ điều phối đa tác tử đến triển khai biên, từ quy trình tự động đến hệ thống ra quyết định thông minh, OPC cung cấp toàn bộ stack cho công ty AI một người.',
+                about_s1: 'Nhà phát triển', about_s2: 'Quy trình AI', about_s3: 'Tỉ lệ tự động', about_s4: 'Khả năng',
+                code_comment1: '# Khởi tạo Singular AI', code_comment2: '# Tạo đội AI', code_comment3: '# Khởi động công ty một người',
+                cta_title: 'Bắt đầu Kỷ nguyên Singular AI', cta_desc: 'Một người + AI = vô hạn khả năng. Liên hệ ngay để có giải pháp AI riêng.',
+                cta_contact: 'Liên hệ', cta_more: 'Tìm hiểu thêm',
+                footer_desc: 'Giải pháp công ty AI một người dựa trên kiến trúc đa tác tử. Một người, cả một đội AI.',
+                footer_services_title: 'Dịch vụ', footer_s1: 'Phát triển AI Agent', footer_s2: 'Triển khai Cloud', footer_s3: 'Tích hợp API', footer_s4: 'Tùy chỉnh Workflow',
+                footer_resources_title: 'Tài nguyên', footer_r1: 'Blog CNTT', footer_r2: 'Tài liệu', footer_r3: 'API Reference', footer_r4: 'FAQ',
+                footer_contact_title: 'Liên hệ', footer_email: 'Email',
+                footer_copy: '© 2025 OPC Singular AI. All rights reserved.',
+                footer_made: 'Build with', footer_for: 'for one-person teams'
+            },
+            kk: {
+                nav_services: 'Қызметтер', nav_blog: 'Блог', nav_about: 'Біз туралы', nav_contact: 'Байланыс', nav_cta: 'Хабарласу',
+                hero_badge: 'AI Agent басқаруы · Бір адам — бүкіл команда',
+                hero_title: 'OPC Singular AI<br>Бір адам, Шексіз күш',
+                hero_desc: 'Мульти-агенттік архитектура негізінде тәуелсіз әзірлеушілер мен шағын топтарға кәсіпорын деңгейіндегі AI шешімдері. Бір адам — тұтас AI команда.',
+                hero_contact: 'Хабарласу', hero_explore: 'Қызметтерді зерттеу', hero_orb_label: 'Мульти-агент · Ақылды үйлестіру',
+                stat_agents: 'AI агенттер', stat_uptime: 'Қолжетімділік', stat_auto: 'Автоматтандыру', stat_drive: 'Бір адам',
+                services_label: 'Негізгі қызметтер', services_title: 'Singular AI · Толық матрица',
+                services_sub: 'Агент әзірлеу, орналастыру және бақылаудың толық циклі.',
+                s1_title: 'Агент фреймворкі', s1_desc: 'OPC Multi-Agent архитектурасы. GPT, Claude, Gemini қолдауы. Күрделі жұмыс процестерін кодсыз құру.',
+                s2_title: 'Бір басумен орналастыру', s2_desc: 'Wasmer, Docker, K8s интеграциясы. Кодтан өндіріске бірнеше минутта.',
+                s3_title: 'Ақылды мониторинг', s3_desc: 'Автоматты масштабтау, ескертулер, журнал талдау. Жасанды интеллект басқаратын 7×24 жұмыс.',
+                s4_title: 'API Gateway', s4_desc: 'Бірыңғай API кіру. WebSocket, gRPC, REST. Telegram Bot, WeCom интеграциясы.',
+                s5_title: 'Қауіпсіздік', s5_desc: 'Шифрлау, деректерді маскалау, жеке орналастыру. Деректеріңіз бен модельдеріңіз қауіпсіз.',
+                s6_title: 'AI жұмыс процесін бейімдеу', s6_desc: 'Кез келген сценарийге арналған AI жұмыс процестері — контент генерациясынан деректер талдауға дейін.',
+                blog_label: 'Технологиялық блог', blog_title: 'Соңғы жаңалықтар', blog_sub: 'AI шекараларын, жеке бизнес тәжірибелерін және агент әзірлеуді зерттеу.',
+                b1_title: 'OPC Multi-Agent: Бір адам 50+ AI агентін қалай басқарады',
+                b1_desc: 'OPC мульти-агенттік архитектурасына терең шолу — агенттерді үйлестіру, тапсырмаларды бөлу, нәтижелерді біріктіру.',
+                b2_tag: 'Орналастыру', b2_title: 'Wasmer: Python AI қызметін үш қадаммен Edge-ке орналастыру',
+                b2_desc: 'Wasmer Edge көмегімен AI қызметін орналастыру бойынша практикалық нұсқаулық.',
+                b3_tag: 'Жеке бизнес', b3_title: 'Айына $7K табыс: Бүкіл команданы AI агенттерімен қалай ауыстырдым',
+                b3_desc: 'Нөлден бастап жеке AI компаниясын құру тәжірибесі — OPC көмегімен өнімді әзірлеу, маркетинг, қолдауды автоматтандыру.',
+                about_label: 'OPC туралы', about_title_hl: 'Singular AI', about_title: ' · Шексіз мүмкіндіктер',
+                about_p1: 'OPC әрбір тәуелсіз әзірлеушіге, гикке және шағын топқа ең төменгі шығынмен кәсіпорын деңгейіндегі AI инфрақұрылымына ие болуға мүмкіндік береді.',
+                about_p2: 'Мульти-агенттік үйлестіруден шеткі орналастыруға дейін, OPC толық AI компаниясына арналған технологиялық стекті ұсынады.',
+                about_s1: 'Белсенді әзірлеушілер', about_s2: 'AI жұмыс процестері', about_s3: 'Автоматтандыру деңгейі', about_s4: 'Мүмкіндіктер',
+                code_comment1: '# Singular AI инициализация', code_comment2: '# AI командасын құру', code_comment3: '# Жеке компанияны іске қосу',
+                cta_title: 'Singular AI дәуірін бастаңыз', cta_desc: 'Бір адам + AI = шексіз мүмкіндіктер. Бүгін хабарласып, жеке AI шешімін алыңыз.',
+                cta_contact: 'Хабарласу', cta_more: 'Толығырақ',
+                footer_desc: 'Мульти-агенттік архитектура негізіндегі жеке AI компаниясына арналған шешім.',
+                footer_services_title: 'Қызметтер', footer_s1: 'AI агент әзірлеу', footer_s2: 'Бұлтты орналастыру', footer_s3: 'API интеграциясы', footer_s4: 'Жұмыс процесін бейімдеу',
+                footer_resources_title: 'Ресурстар', footer_r1: 'Технологиялық блог', footer_r2: 'Құжаттама', footer_r3: 'API анықтамасы', footer_r4: 'Сұрақ-жауап',
+                footer_contact_title: 'Байланыс', footer_email: 'Email',
+                footer_copy: '© 2025 OPC Singular AI. All rights reserved.',
+                footer_made: 'Build with', footer_for: 'for one-person teams'
+            },
+            uz: {
+                nav_services: 'Xizmatlar', nav_blog: 'Blog', nav_about: 'Biz haqimizda', nav_contact: 'Aloqa', nav_cta: 'Aloqaga chiqish',
+                hero_badge: 'AI Agent boshqaruvi · Bir kishi — butun jamoa',
+                hero_title: 'OPC Singular AI<br>Bir kishi, Cheksiz kuch',
+                hero_desc: 'Multi-agent arxitekturasi asosida mustaqil ishlab chiqaruvchilar va kichik guruhlar uchun korxona darajasidagi AI yechimlari. Bir kishi — butun AI jamoasi.',
+                hero_contact: 'Aloqaga chiqish', hero_explore: 'Xizmatlarni o\'rganish', hero_orb_label: 'Multi-agent · Aqilli hamkorlik',
+                stat_agents: 'AI agentlar', stat_uptime: 'Ishlash vaqti', stat_auto: 'Avtomatlashtirish', stat_drive: 'Bir kishi',
+                services_label: 'Asosiy xizmatlar', services_title: 'Singular AI · To\'liq matritsa',
+                services_sub: 'Agent ishlab chiqish, joylashtirish va monitoringning to\'liq sikli.',
+                s1_title: 'Agent freymvorki', s1_desc: 'OPC Multi-Agent arxitekturasi. GPT, Claude, Gemini qo\'llab-quvvatlashi. Murakkab ish oqimlarini kodsiz qurish.',
+                s2_title: 'Bir bosish bilan joylashtirish', s2_desc: 'Wasmer, Docker, K8s bilan chuqur integratsiya. Koddan ishlab chiqarishga bir necha daqiqada.',
+                s3_title: 'Aqilli monitoring', s3_desc: 'Avtomatik kengaytirish, ogohlantirishlar, jurnal tahlili. AI boshqaradigan 7×24 ish.',
+                s4_title: 'API Gateway', s4_desc: 'Yagona API kirish. WebSocket, gRPC, REST. Telegram Bot, WeCom integratsiyasi.',
+                s5_title: 'Xavfsizlik', s5_desc: 'Shifrlash, ma\'lumotlarni maskalash, xususiy joylashtirish. Ma\'lumotlaringiz va modellaringiz xavfsiz.',
+                s6_title: 'AI ish oqimini sozlash', s6_desc: 'Har qanday stsenariy uchun AI ish oqimlari — kontent generatsiyasidan ma\'lumotlar tahliligacha.',
+                blog_label: 'Texnologik blog', blog_title: 'Eng so\'nggi yangiliklar', blog_sub: 'AI chegaralarini, yakka biznes amaliyotlarini va agent ishlab chiqishni o\'rganish.',
+                b1_title: 'OPC Multi-Agent: Bir kishi 50+ AI agentini qanday boshqaradi',
+                b1_desc: 'OPC multi-agent arxitekturasiga chuqur nazar — agentlarni muvofiqlashtirish, vazifalarni taqsimlash, natijalarni birlashtirish.',
+                b2_tag: 'Joylashtirish', b2_title: 'Wasmer: Python AI xizmatini uch qadamda Edge-ga joylashtirish',
+                b2_desc: 'Wasmer Edge yordamida AI xizmatini joylashtirish bo\'yicha amaliy qo\'llanma.',
+                b3_tag: 'Yakka biznes', b3_title: 'Oylik $7K daromad: Butun jamoani AI agentlari bilan qanday almashtirdim',
+                b3_desc: 'Noldan yakka AI kompaniyasini qurish tajribasi — OPC bilan mahsulot ishlab chiqish, marketing, qo\'llab-quvvatlashni avtomatlashtirish.',
+                about_label: 'OPC haqida', about_title_hl: 'Singular AI', about_title: ' · Cheksiz imkoniyatlar',
+                about_p1: 'OPC har bir mustaqil ishlab chiqaruvchi, geek va kichik guruhga eng kam xarajat bilan korxona darajasidagi AI infratuzilmasiga ega bo\'lish imkonini beradi.',
+                about_p2: 'Multi-agent muvofiqlashtirishdan chekka joylashtirishgacha, OPC to\'liq AI kompaniyasi uchun texnologik stackni taqdim etadi.',
+                about_s1: 'Faol ishlab chiqaruvchilar', about_s2: 'AI ish oqimlari', about_s3: 'Avtomatlashtirish darajasi', about_s4: 'Imkoniyatlar',
+                code_comment1: '# Singular AI ishga tushirish', code_comment2: '# AI jamoasini yaratish', code_comment3: '# Yakka kompaniyani ishga tushirish',
+                cta_title: 'Singular AI davrini boshlang', cta_desc: 'Bir kishi + AI = cheksiz imkoniyatlar. Bugun aloqaga chiqib, shaxsiy AI yechimini oling.',
+                cta_contact: 'Aloqaga chiqish', cta_more: 'Batafsil',
+                footer_desc: 'Multi-agent arxitekturasi asosidagi yakka AI kompaniyasi uchun yechim.',
+                footer_services_title: 'Xizmatlar', footer_s1: 'AI agent ishlab chiqish', footer_s2: 'Bulutli joylashtirish', footer_s3: 'API integratsiyasi', footer_s4: 'Ish oqimini sozlash',
+                footer_resources_title: 'Resurslar', footer_r1: 'Texnologik blog', footer_r2: 'Hujjatlar', footer_r3: 'API ma\'lumotnomasi', footer_r4: 'Savol-javob',
+                footer_contact_title: 'Aloqa', footer_email: 'Email',
+                footer_copy: '© 2025 OPC Singular AI. All rights reserved.',
+                footer_made: 'Build with', footer_for: 'for one-person teams'
+            },
+            ky: {
+                nav_services: 'Кызматтар', nav_blog: 'Блог', nav_about: 'Биз жөнүндө', nav_contact: 'Байланыш', nav_cta: 'Байланышуу',
+                hero_badge: 'AI Agent башкаруусу · Бир адам — бүт команда',
+                hero_title: 'OPC Singular AI<br>Бир адам, Чексиз күч',
+                hero_desc: 'Мульти-агенттик архитектура негизинде көз карандысыз иштеп чыгуучулар жана чакан топтор үчүн ишкана деңгээлиндеги AI чечимдери. Бир адам — бүт AI командасы.',
+                hero_contact: 'Байланышуу', hero_explore: 'Кызматтарды изилдөө', hero_orb_label: 'Мульти-агент · Акылдуу координация',
+                stat_agents: 'AI агенттер', stat_uptime: 'Жеткиликтүүлүк', stat_auto: 'Автоматташтыруу', stat_drive: 'Бир адам',
+                services_label: 'Негизги кызматтар', services_title: 'Singular AI · Толук матрица',
+                services_sub: 'Агент иштеп чыгуу, жайгаштыруу жана көзөмөлдөөнүн толук цикли.',
+                s1_title: 'Агент фреймворку', s1_desc: 'OPC Multi-Agent архитектурасы. GPT, Claude, Gemini колдоосу. Татаал иш процесстерин кодсуз түзүү.',
+                s2_title: 'Бир басуу менен жайгаштыруу', s2_desc: 'Wasmer, Docker, K8s менен терең интеграция. Коддон өндүрүшкө бир нече мүнөттө.',
+                s3_title: 'Акылдуу мониторинг', s3_desc: 'Автоматтык масштабдоо, эскертүүлөр, журнал талдоо. AI башкарган 7×24 иш.',
+                s4_title: 'API Gateway', s4_desc: 'Бириккен API кирүү. WebSocket, gRPC, REST. Telegram Bot, WeCom интеграциясы.',
+                s5_title: 'Коопсуздук', s5_desc: 'Шифрлөө, маалыматтарды маскалоо, жеке жайгаштыруу. Маалыматтарыңыз жана моделдериңиз коопсуз.',
+                s6_title: 'AI иш процессин ыңгайлаштыруу', s6_desc: 'Кандайдыр бир сценарий үчүн AI иш процесстери — контент генерациясынан маалыматтарды талдоого чейин.',
+                blog_label: 'Технологиялык блог', blog_title: 'Акыркы жаңылыктар', blog_sub: 'AI чек араларын, жеке бизнес тажрыйбаларын жана агент иштеп чыгууну изилдөө.',
+                b1_title: 'OPC Multi-Agent: Бир адам 50+ AI агентин кантип башкарат',
+                b1_desc: 'OPC мульти-агенттик архитектурасына терең сереп — агенттерди координациялоо, тапшырмаларды бөлүштүрүү, натыйжаларды бириктирүү.',
+                b2_tag: 'Жайгаштыруу', b2_title: 'Wasmer: Python AI кызматын үч кадамда Edge-ге жайгаштыруу',
+                b2_desc: 'Wasmer Edge жардамы менен AI кызматын жайгаштыруу боюнча практикалык колдонмо.',
+                b3_tag: 'Жеке бизнес', b3_title: 'Айына $7K киреше: Бүт команданы AI агенттери менен кантип алмаштырдым',
+                b3_desc: 'Нөлдөн баштап жеке AI компаниясын түзүү тажрыйбасы — OPC менен продукт иштеп чыгуу, маркетинг, колдоону автоматташтыруу.',
+                about_label: 'OPC жөнүндө', about_title_hl: 'Singular AI', about_title: ' · Чексиз мүмкүнчүлүктөр',
+                about_p1: 'OPC ар бир көз карандысыз иштеп чыгуучуга, гикке жана чакан топко эң аз чыгым менен ишкана деңгээлиндеги AI инфраструктурасына ээ болууга мүмкүндүк берет.',
+                about_p2: 'Мульти-агенттик координациядан чектик жайгаштырууга чейин, OPC толук AI компаниясы үчүн технологиялык стекти сунуштайт.',
+                about_s1: 'Активдүү иштеп чыгуучулар', about_s2: 'AI иш процесстери', about_s3: 'Автоматташтыруу деңгээли', about_s4: 'Мүмкүнчүлүктөр',
+                code_comment1: '# Singular AI инициализация', code_comment2: '# AI командасын түзүү', code_comment3: '# Жеке компанияны ишке киргизүү',
+                cta_title: 'Singular AI доорун баштаңыз', cta_desc: 'Бир адам + AI = чексиз мүмкүнчүлүктөр. Бүгүн байланышып, жеке AI чечимин алыңыз.',
+                cta_contact: 'Байланышуу', cta_more: 'Кененирээк',
+                footer_desc: 'Мульти-агенттик архитектура негизиндеги жеке AI компаниясы үчүн чечим.',
+                footer_services_title: 'Кызматтар', footer_s1: 'AI агент иштеп чыгуу', footer_s2: 'Булттуу жайгаштыруу', footer_s3: 'API интеграциясы', footer_s4: 'Иш процессин ыңгайлаштыруу',
+                footer_resources_title: 'Ресурстар', footer_r1: 'Технологиялык блог', footer_r2: 'Документтер', footer_r3: 'API маалымдамасы', footer_r4: 'Көп берилүүчү суроолор',
+                footer_contact_title: 'Байланыш', footer_email: 'Email',
+                footer_copy: '© 2025 OPC Singular AI. All rights reserved.',
+                footer_made: 'Build with', footer_for: 'for one-person teams'
+            },
+            tk: {
+                nav_services: 'Hyzmatlar', nav_blog: 'Blog', nav_about: 'Biz barada', nav_contact: 'Habarlaşmak', nav_cta: 'Habarlaş',
+                hero_badge: 'AI Agent dolandyryşy · Bir adam — tutuş topar',
+                hero_title: 'OPC Singular AI<br>Bir adam, Çäksiz güýç',
+                hero_desc: 'Köp-agent arhitekturasy esasynda garaşsyz işläp çykaryjylar we kiçi toparlar üçin kärhana derejesindäki AI çözgütleri. Bir adam — tutuş AI topary.',
+                hero_contact: 'Habarlaş', hero_explore: 'Hyzmatlary öwren', hero_orb_label: 'Köp-agent · Akylly utgaşdyrma',
+                stat_agents: 'AI agentler', stat_uptime: 'Elýeterlilik', stat_auto: 'Awtomatlaşdyrma', stat_drive: 'Bir adam',
+                services_label: 'Esasy hyzmatlar', services_title: 'Singular AI · Doly matrisa',
+                services_sub: 'Agent işläp taýýarlamagy, ýerleşdirmegi we gözegçiligiň doly siklini öz içine alýar.',
+                s1_title: 'Agent freýmworki', s1_desc: 'OPC Multi-Agent arhitekturasy. GPT, Claude, Gemini goldawy. Çylşyrymly iş akymlaryny kodsyz gurmak.',
+                s2_title: 'Bir basmakda ýerleşdirmek', s2_desc: 'Wasmer, Docker, K8s bilen çuň integrasiýa. Koddan öndürlige birnäçe minutda.',
+                s3_title: 'Akylly monitoring', s3_desc: 'Awtomatik giňeltmek, duýduryşlar, žurnal analizi. AI dolandyrýan 7×24 iş.',
+                s4_title: 'API Gateway', s4_desc: 'Birleşen API giriş. WebSocket, gRPC, REST. Telegram Bot, WeCom integrasiýasy.',
+                s5_title: 'Howpsuzlyk', s5_desc: 'Şifrleme, maglumatlary maskalamak, hususy ýerleşdirmek. Maglumatlaryňyz we modelleriňiz howpsuz.',
+                s6_title: 'AI iş akymyny sazlamak', s6_desc: 'Islendik ssenariý üçin AI iş akymlary — kontent generasiýasyndan maglumat analizine çenli.',
+                blog_label: 'Tehnologik blog', blog_title: 'Iň soňky täzelikler', blog_sub: 'AI araçäklerini, ýekebara iş tejribelerini we agent işläp taýýarlamagy öwrenmek.',
+                b1_title: 'OPC Multi-Agent: Bir adam 50+ AI agentini nädip dolandyrýar',
+                b1_desc: 'OPC köp-agent arhitekturasynda çuňňur gözleg — agentleri utgaşdyrmak, tabşyryklary paýlamak, netijeleri birleşdirmek.',
+                b2_tag: 'Ýerleşdirmek', b2_title: 'Wasmer: Python AI hyzmatyny üç ädimde Edge-ä ýerleşdirmek',
+                b2_desc: 'Wasmer Edge kömegi bilen AI hyzmatyny ýerleşdirmek boýunça amaly gollanma.',
+                b3_tag: 'Ýekebara iş', b3_title: 'Aýda $7K girdeji: Tutuş topary AI agentleri bilen nädip çalyşdym',
+                b3_desc: 'Noldan başlap ýeke AI kompaniýasyny gurmak tejribesi — OPC bilen önüm işläp taýýarlamagy, marketingi, goldawy awtomatlaşdyrmak.',
+                about_label: 'OPC barada', about_title_hl: 'Singular AI', about_title: ' · Çäksiz mümkinçilikler',
+                about_p1: 'OPC her bir garaşsyz işläp çykaryja, gige we kiçi toparyna iň az çykdajy bilen kärhana derejesindäki AI infrastrukturasyna eýe bolmaga mümkinçilik berýär.',
+                about_p2: 'Köp-agent utgaşdyrmasyndan çet ýerleşdirmäge çenli, OPC doly AI kompaniýasy üçin tehnologik steki hödürleýär.',
+                about_s1: 'Işjeň işläp çykaryjylar', about_s2: 'AI iş akymlary', about_s3: 'Awtomatlaşdyrma derejesi', about_s4: 'Mümkinçilikler',
+                code_comment1: '# Singular AI inizializasiýa', code_comment2: '# AI toparyny döret', code_comment3: '# Ýeke kompaniýany işe goýber',
+                cta_title: 'Singular AI döwrüni başlaň', cta_desc: 'Bir adam + AI = çäksiz mümkinçilikler. Şu gün habarlaşyp, ýörite AI çözgüdini alyň.',
+                cta_contact: 'Habarlaş', cta_more: 'Giňişleýin',
+                footer_desc: 'Köp-agent arhitekturasy esasynda ýeke AI kompaniýasy üçin çözgüt.',
+                footer_services_title: 'Hyzmatlar', footer_s1: 'AI agent işläp taýýarlamak', footer_s2: 'Bulut ýerleşdirmek', footer_s3: 'API integrasiýasy', footer_s4: 'Iş akymyny sazlamak',
+                footer_resources_title: 'Çeşmeler', footer_r1: 'Tehnologik blog', footer_r2: 'Resminamalar', footer_r3: 'API salgylanmasy', footer_r4: 'Köp berilýän soraglar',
+                footer_contact_title: 'Habarlaşmak', footer_email: 'Email',
+                footer_copy: '© 2025 OPC Singular AI. All rights reserved.',
+                footer_made: 'Build with', footer_for: 'for one-person teams'
+            },
+            tg: {
+                nav_services: 'Хизматҳо', nav_blog: 'Блог', nav_about: 'Дар бораи мо', nav_contact: 'Тамос', nav_cta: 'Тамос гиред',
+                hero_badge: 'AI Agent идоракунӣ · Як шахс — тамоми даста',
+                hero_title: 'OPC Singular AI<br>Як шахс, Қудрати бепоён',
+                hero_desc: 'Дар асоси архитектураи бисёр-агентӣ барои таҳиягарони мустақил ва гурӯҳҳои хурд ҳалли сатҳи корхонавии AI. Як шахс — тамоми дастаи AI.',
+                hero_contact: 'Тамос гиред', hero_explore: 'Хизматро омӯзед', hero_orb_label: 'Бисёр-агент · Ҳамкории интеллектуалӣ',
+                stat_agents: 'AI агентҳо', stat_uptime: 'Дастрасӣ', stat_auto: 'Автоматизатсия', stat_drive: 'Як шахс',
+                services_label: 'Хизматҳои асосӣ', services_title: 'Singular AI · Матритсаи пурра',
+                services_sub: 'Давраи пурраи таҳия, ҷойгиркунӣ ва мониторинги агентҳои AI.',
+                s1_title: 'Фреймворки агент', s1_desc: 'Архитектураи OPC Multi-Agent. Дастгирии GPT, Claude, Gemini. Сохтани ҷараёнҳои мураккаб бидуни код.',
+                s2_title: 'Ҷойгиркунӣ бо як пахш', s2_desc: 'Ҳамгироии амиқ бо Wasmer, Docker, K8s. Аз код ба истеҳсолот дар чанд дақиқа.',
+                s3_title: 'Мониторинги интеллектуалӣ', s3_desc: 'Миқёсгузории автоматӣ, огоҳиҳо, таҳлили журнал. Идоракунии AI дар 7×24 бе назорат.',
+                s4_title: 'API Gateway', s4_desc: 'Вуруди ягонаи API. WebSocket, gRPC, REST. Ҳамгироии Telegram Bot, WeCom.',
+                s5_title: 'Бехатарӣ ва махфият', s5_desc: 'Рамзгузории охир-ба-охир, ниқоб кардани маълумот, ҷойгиркунии хусусӣ. Маълумот ва моделҳои шумо бехатар.',
+                s6_title: 'Танзими ҷараёни AI', s6_desc: 'Ҷараёнҳои AI барои ҳама гуна сенария — аз тавлиди мундариҷа то таҳлили маълумот.',
+                blog_label: 'Блоги технологӣ', blog_title: 'Навтарин бинишҳо', blog_sub: 'Омӯзиши сарҳадҳои AI, таҷрибаҳои тиҷорати инфиродӣ ва таҳияи агентҳо.',
+                b1_title: 'OPC Multi-Agent: Як шахс 50+ AI агентро чӣ гуна идора мекунад',
+                b1_desc: 'Шарҳи амиқи архитектураи бисёр-агентӣ — ҳамоҳангсозии агентҳо, тақсимоти вазифаҳо, якҷоякунии натиҷаҳо.',
+                b2_tag: 'Ҷойгиркунӣ', b2_title: 'Wasmer: Хизмати AI Pythonро дар се қадам ба Edge ҷойгир кунед',
+                b2_desc: 'Дастури амалӣ оид ба ҷойгиркунии AI дар Wasmer Edge бо WebAssembly.',
+                b3_tag: 'Тиҷорати инфиродӣ', b3_title: 'Даромади моҳона $7K: Чӣ тавр тамоми дастаро бо AI агентҳо иваз кардам',
+                b3_desc: 'Таҷрибаи сохтани ширкати AI аз сифр — автоматӣ кардании таҳия, маркетинг, дастгирӣ бо OPC.',
+                about_label: 'Дар бораи OPC', about_title_hl: 'Singular AI', about_title: ' · Имкониятҳои бепоён',
+                about_p1: 'OPC ба ҳар як таҳиягари мустақил, гик ва гурӯҳи хурд имкон медиҳад, ки бо арзиши камтарин инфрасохтори сатҳи корхонавии AI дошта бошад.',
+                about_p2: 'Аз ҳамоҳангсозии бисёр-агентӣ то ҷойгиркунии канорӣ, OPC стек технологии пурра барои ширкати AI-ро пешниҳод мекунад.',
+                about_s1: 'Таҳиягарони фаъол', about_s2: 'Ҷараёнҳои AI', about_s3: 'Сатҳи автоматӣ', about_s4: 'Имкониятҳо',
+                code_comment1: '# Singular AI инициализатсия', code_comment2: '# Дастаи AI эҷод кунед', code_comment3: '# Ширкати инфиродиро оғоз кунед',
+                cta_title: 'Даврони Singular AI-ро оғоз кунед', cta_desc: 'Як шахс + AI = имкониятҳои бепоён. Имрӯз тамос гирифта, ҳалли AI гиред.',
+                cta_contact: 'Тамос гиред', cta_more: 'Бештар омӯзед',
+                footer_desc: 'Ҳалли ширкати AI дар асоси архитектураи бисёр-агентӣ барои як шахс.',
+                footer_services_title: 'Хизматҳо', footer_s1: 'Таҳияи AI агент', footer_s2: 'Ҷойгиркунии абрӣ', footer_s3: 'Ҳамгироии API', footer_s4: 'Танзими ҷараён',
+                footer_resources_title: 'Захираҳо', footer_r1: 'Блоги технологӣ', footer_r2: 'Ҳуҷҷатҳо', footer_r3: 'Маълумотномаи API', footer_r4: 'Саволҳои зуд-зуд',
+                footer_contact_title: 'Тамос', footer_email: 'Email',
+                footer_copy: '© 2025 OPC Singular AI. All rights reserved.',
+                footer_made: 'Build with', footer_for: 'for one-person teams'
+            }
+        };
+
+        function getFlag(lang) {
+            return langFlags[lang] || '🌐';
+        }
+
+        function getLangName(lang) {
+            const map = {zh:'中',en:'EN',ja:'日',vi:'VN',kk:'ҚЗ',uz:'O\'Z',ky:'КГ',tk:'TM',tg:'ТҶ'};
+            return map[lang] || lang.toUpperCase();
+        }
+
+        function toggleLang() {
+            document.getElementById('langDropdown').classList.toggle('show');
+        }
+
+        function switchLang(lang) {
+            const t = translations[lang];
+            if (!t) return;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.dataset.i18n;
+                if (t[key] !== undefined) {
+                    if (key === 'hero_title') {
+                        el.innerHTML = t[key];
+                    } else {
+                        el.textContent = t[key];
+                    }
+                }
+            });
+            document.getElementById('langFlag').textContent = getFlag(lang);
+            document.getElementById('langName').textContent = getLangName(lang);
+            document.querySelectorAll('.lang-option').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === lang);
+            });
+            document.getElementById('langDropdown').classList.remove('show');
+            localStorage.setItem(LANG_STORAGE_KEY, lang);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const lang = localStorage.getItem(LANG_STORAGE_KEY) || 'en';
+            switchLang(lang);
+
+            document.querySelectorAll('.lang-option').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    switchLang(this.dataset.lang);
+                });
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.lang-selector')) {
+                    document.getElementById('langDropdown').classList.remove('show');
+                }
+            });
+
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 30; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.width = p.style.height = (1 + Math.random() * 3) + 'px';
+                p.style.animationDuration = (15 + Math.random() * 25) + 's';
+                p.style.animationDelay = (Math.random() * 20) + 's';
+                container.appendChild(p);
+            }
+        });
+
+        window.addEventListener('scroll', function() {
+            document.getElementById('header').classList.toggle('scrolled', window.scrollY > 50);
+        });
+    </script>
+</body>
+</html>
