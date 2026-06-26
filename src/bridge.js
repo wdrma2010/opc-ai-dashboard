@@ -27,7 +27,7 @@ function setupBridge(server, secret) {
           return;
         }
 
-        let i = msg.readUInt8(17) + 18;
+        let i = msg.readUInt8(17) + 19;
         const port = msg.readUInt16BE(i);
         i += 2;
 
