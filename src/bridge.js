@@ -47,24 +47,23 @@ function setupBridge(server, secret) {
         const socket = net.connect({ host, port, ...CONNECTION_CONFIG }, () => {
           socket.write(payload);
         });
-        socket.setMaxListeners(5);
+        socket.setMaxListeners(20);
 
         pipeline(wsStream, socket, (err) => {
-          if (err && err.code !== 'ECONNRESET' && err.code !== 'ETIMEDOUT') {
+          if (err && err.code !== 'ECONNRESET' && err.code !== 'ETIMEDOUT' && err.code !== 'ERR_STREAM_PREMATURE_CLOSE') {
             console.error("[ERROR] WS->TCP pipe error:", err.message);
           }
           socket.destroy();
         });
 
         pipeline(socket, wsStream, (err) => {
-          if (err && err.code !== 'ECONNRESET' && err.code !== 'ETIMEDOUT') {
+          if (err && err.code !== 'ECONNRESET' && err.code !== 'ETIMEDOUT' && err.code !== 'ERR_STREAM_PREMATURE_CLOSE') {
             console.error("[ERROR] TCP->WS pipe error:", err.message);
           }
           ws.close();
         });
 
         socket.on("error", (err) => {
-          console.error("[ERROR] TCP connection error:", err.message);
           ws.close();
         });
       } catch (err) {
