@@ -2,7 +2,12 @@
 
 npm run start &
 
-ARGS="--no-autoupdate"
+for i in $(seq 1 15); do
+  wget -q -O /dev/null http://localhost:8080/ 2>/dev/null && break
+  sleep 1
+done
+
+ARGS="--no-autoupdate --protocol http2"
 
 if [ "$TUNNEL_FORCE_IP_VERSION" = "6" ]; then
     ARGS="$ARGS --edge-ip-version 6"
