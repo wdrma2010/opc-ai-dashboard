@@ -7,7 +7,7 @@ RUN apk add --no-cache wget ca-certificates && \
     chmod +x /usr/local/bin/cloudflared
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 COPY . .
 
